@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=2]
+[gd_scene load_steps=21 format=2]
 
 [ext_resource path="res://Brick/Brick_Container.gd" type="Script" id=1]
 [ext_resource path="res://Paddle/Paddle.tscn" type="PackedScene" id=2]
@@ -9,6 +9,98 @@
 [ext_resource path="res://UI/HUD.tscn" type="PackedScene" id=7]
 [ext_resource path="res://UI/Instructions.tscn" type="PackedScene" id=8]
 [ext_resource path="res://Effects/Fever.gd" type="Script" id=9]
+[ext_resource path="res://Assets/kaleidoplasm - poison control.mp3" type="AudioStream" id=10]
+[ext_resource path="res://Assets/ball.wav" type="AudioStream" id=11]
+[ext_resource path="res://Assets/wall.wav" type="AudioStream" id=12]
+[ext_resource path="res://Assets/paddle.wav" type="AudioStream" id=13]
+[ext_resource path="res://Assets/brick.wav" type="AudioStream" id=14]
+
+[sub_resource type="Shader" id=7]
+code = "shader_type canvas_item;
+
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+
+uniform float screen_resolution = 1;
+
+mat2 rot_dist(float s, float d)
+{
+    float angularspeed = s * pow(d, 8.0);
+    float cas = cos(angularspeed);
+    float sas = sin(angularspeed);
+    return mat2(vec2(cas, -sas), vec2(sas, cas));
+}
+
+void fragment()
+{
+	
+	
+    vec3 ring_color = vec3(0.976, 0.447, 0.023);
+    
+    vec2 uv = FRAGCOORD.xy/(1.0 / SCREEN_PIXEL_SIZE);
+    float ratio = (1.0 / SCREEN_PIXEL_SIZE).y/(1.0 / SCREEN_PIXEL_SIZE).x;
+    uv.y *= ratio;
+    
+    vec2 center = ((1.0 / SCREEN_PIXEL_SIZE).xy * .5f) / (1.0 / SCREEN_PIXEL_SIZE).xy;
+    //center = iMouse.xy / iResolution.xy;
+    center.y *= ratio;
+    
+    float _dist = distance(uv, center);
+    float _s = .15;
+    float _a = .005;
+    vec2 uvp = uv + min(texture(iChannel2, _s * vec2(uv.x + TIME * .1, uv.y + TIME * -.3)).r,
+                        texture(iChannel2, _s * vec2(uv.x + TIME * -.3, uv.y + TIME * .2)).r) * _a * pow(1. - _dist, 5.);
+    
+    float dist = distance(uvp, center);
+    float idist = 1.0 - dist;
+    vec2 dir = normalize(uv - center);
+    
+    // Mask
+    float m = step(.06, dist);
+    m *= smoothstep(.065, .08, dist);
+    m = (1.0 - dist * 1.6) * 2. * m;
+	float mask = m;
+    
+    // Phases
+    float speed = -0.06;
+    float phase1 = fract(TIME * speed + .5);
+    float phase2 = fract(TIME * speed);
+    
+    float pidist = pow(idist, 2.3);
+    vec2 uv1 = (dir * pidist * .2) + phase1 * dir;
+    vec2 uv2 = (dir * pidist * .2) + phase2 * dir;
+    
+    // Samplings
+    float lerp = abs((.5 - phase1) / .5);
+    float sampling1 = texture(iChannel0, uv1 * rot_dist(2.4, idist)).r;
+    float sampling2 = texture(iChannel0, uv2 * rot_dist(2.4, idist)).r;
+    
+    float sampling3 = texture(iChannel0, uv1 * 2. * rot_dist(2.6, idist)).g;
+    float sampling4 = texture(iChannel0, uv2 * 2. * rot_dist(2.6, idist)).g;
+    
+    float sampling5 = texture(iChannel1, uv1 * rot_dist(4.6, idist) * .4).r;
+    float sampling6 = texture(iChannel1, uv2 * rot_dist(4.6, idist) * .6).r;
+    
+    float stars = (1. - smoothstep(0.22, 0.34, mix(sampling3, sampling4, lerp))) * 0.4;
+    
+    vec3 sp = mix(sampling1, sampling2, lerp) * vec3(1.);
+    sp *= 0.2;
+   	sp += stars * vec3(0.13, 0.31, 0.46);
+    sp += smoothstep(0.26, 0.14, mix(sampling5, sampling6, lerp)) * vec3(0.7) * pow(idist, 8.) * ring_color;
+    
+    vec3 finalSamp = sp;
+    vec3 col = ring_color * pow(1.0 - dist, 7.);
+    float ring = pow(smoothstep(.32, .08, dist * 1.5) * 3.5, 2.8) + 1.;
+
+    
+    
+    COLOR = vec4(finalSamp * mask + 1.2 * ring * mask * finalSamp * col, 1.);
+}"
+
+[sub_resource type="ShaderMaterial" id=8]
+shader = SubResource( 7 )
+shader_param/screen_resolution = 1.0
 
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 100, 500 )
@@ -16,8 +108,39 @@ extents = Vector2( 100, 500 )
 [sub_resource type="RectangleShape2D" id=2]
 extents = Vector2( 612, 100 )
 
+[sub_resource type="Shader" id=5]
+code = "shader_type canvas_item;
+
+uniform vec4 color_gap: hint_color = vec4(0.25);
+uniform vec4 color_stripe: hint_color = vec4(1.0, 0.75, 0.0, 1.0);
+uniform float divisions = 8.0; // increase for more stripe density
+uniform float stripe_bias = 2.5; // 1.0 means no stripes; 2.0 means stripes and gaps are equal size
+uniform float speed = 0.1;
+uniform float angle = 0.7854; // in radians
+
+void fragment() {
+	float w = cos(angle) * UV.x + sin(angle) * UV.y - speed * TIME;
+	if (floor(mod(w * divisions, stripe_bias)) < 0.0001) {
+		COLOR = color_gap;
+	} else {
+		COLOR = color_stripe;
+	}
+}"
+
+[sub_resource type="ShaderMaterial" id=6]
+shader = SubResource( 5 )
+shader_param/color_gap = Color( 0.25, 0.25, 0.25, 0.25 )
+shader_param/color_stripe = Color( 1, 0.75, 0, 1 )
+shader_param/divisions = 8.0
+shader_param/stripe_bias = 2.5
+shader_param/speed = 0.1
+shader_param/angle = 0.7854
+
 [node name="Game" type="Node2D"]
 script = ExtResource( 4 )
+
+[node name="Sprite" type="Sprite" parent="."]
+material = SubResource( 8 )
 
 [node name="Wall_Container" type="Node2D" parent="."]
 
@@ -84,11 +207,30 @@ script = ExtResource( 9 )
 [node name="HUD" parent="UI" instance=ExtResource( 7 )]
 pause_mode = 0
 visible = false
+material = SubResource( 6 )
 
 [node name="Pause_Menu" parent="UI" instance=ExtResource( 5 )]
 visible = false
 
 [node name="Instructions" parent="UI" instance=ExtResource( 8 )]
 pause_mode = 2
+
+[node name="Music" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 10 )
+autoplay = true
+
+[node name="Wall_Sound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 12 )
+
+[node name="Paddle_Sound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 13 )
+
+[node name="Brick_Sound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 14 )
+volume_db = 10.0
+
+[node name="Die_Sound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 11 )
+volume_db = 10.0
 
 [connection signal="timeout" from="Fever/Timer" to="Fever" method="_on_Timer_timeout"]
