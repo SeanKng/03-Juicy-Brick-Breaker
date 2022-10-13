@@ -1,20 +1,17 @@
-# Brick-Breaker
+# Juicy Brick Breaker
+Project #3 for ML_MSCH_C220 at Indiana University, created October 13th, 2022
 
-A starting place for Project 03
-
-
-```
-# Project Name
-Context and date
-
-Description
+A simple 2D Juic Brick Breaker game.
 
 ## Implementation
-Which features you included
+I include sound efeects, music, 
 
+Created using [Godot 3.5](https://godotengine.org/download)
 ## References
 
+
 ## Future Development
+None
 
 ## Created by
 Sean Kang
