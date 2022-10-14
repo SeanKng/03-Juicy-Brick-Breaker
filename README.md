@@ -4,7 +4,8 @@ Project #3 for ML_MSCH_C220 at Indiana University, created October 13th, 2022
 A simple 2D Juic Brick Breaker game.
 
 ## Implementation
-I include sound efeects, music, texture, face for the paddle, and background with using shades
+I include sound efeects, music, texture, face for the paddle, and background with using shades.
+
 Also, the background shake when the fever time started. 
 
 Created using [Godot 3.5](https://godotengine.org/download)
