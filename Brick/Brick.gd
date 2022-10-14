@@ -6,6 +6,8 @@ var dying = false
 
 var powerup_prob = 0.1
 
+
+
 func _ready():
 	randomize()
 	position = new_position
@@ -15,6 +17,8 @@ func _physics_process(_delta):
 		queue_free()
 
 func hit(_ball):
+	$Tween.interpolate_property($ColorRect, "position:y", 40, 20, 0.8, Tween.TRANS_BOUNCE, Tween.EASE_IN)
+	$Tween.start()
 	var brick_sound = get_node_or_null("/root/Game/Brick_Sound")
 	if brick_sound != null:
 		brick_sound.play()
